@@ -1,9 +1,20 @@
 from aws_cdk import (
     core as cdk,
     aws_ecs as ecs,
+    aws_ecs_patterns as ecs_patterns,
+    aws_iam as iam,
+    aws_kms as kms,
+    aws_logs as logs,
+    aws_s3 as s3,
     aws_ec2 as ec2,
     aws_autoscaling as autoscaling
 )
+
+
+        
+
+
+
 
 
 class CPDemo(cdk.Stack):
@@ -17,7 +28,10 @@ class CPDemo(cdk.Stack):
             self, "ASG",
             vpc=vpc,
             instance_type=ec2.InstanceType('t3.medium'),
-            machine_image=ecs.EcsOptimizedImage.amazon_linux2(),
+            machine_image=ecs.EcsOptimizedImage.amazon_linux2(
+                hardware_type=ecs.AmiHardwareType.STANDARD
+                #hardware_type=ecs.AmiHardwareType.ARM
+            ),
             min_capacity=0,
             max_capacity=100
         )
@@ -54,3 +68,62 @@ class CPDemo(cdk.Stack):
                 )
             ]
         )
+        
+        ### ECS EXEC ###
+        # Cluster level pre-requisites for logging and auditing
+        # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html#ecs-exec-logging
+        kms_key = kms.Key(self, "ExecKmsKey")
+        exec_bucket = s3.Bucket(
+            self, "ExecS3Bucket", 
+            removal_policy=cdk.RemovalPolicy.DESTROY, 
+        )
+        
+        log_group = logs.LogGroup(self, "ExecLogGroup")
+        
+        # We need to override the CFN template to enable exec functionality
+        # More info on how to do this via "escape hatches": https://docs.aws.amazon.com/cdk/latest/guide/cfn_layer.html
+        cluster.node.default_child.add_property_override(
+            'Configuration.ExecuteCommandConfiguration',
+            {
+                "KmsKeyId": kms_key.key_id,
+                "LogConfiguration": {
+                    "CloudWatchLogGroupName": log_group.log_group_name,
+                    "S3BucketName": exec_bucket.bucket_name,
+                    "S3KeyPrefix": "exec-output"
+                },
+                "Logging": "OVERRIDE"
+            }
+        )
+        
+        # IAM policy required for task role
+        # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html#ecs-exec-enabling-and-using
+        ecs_exec_task_policy_statement = iam.PolicyStatement(
+            actions=[
+                "ssmmessages:CreateControlChannel",
+                "ssmmessages:CreateDataChannel",
+                "ssmmessages:OpenControlChannel",
+                "ssmmessages:OpenDataChannel"               
+            ],
+            resources=['*']
+        )
+        
+        ecs_exec_task_policy = iam.Policy(self, "ExecPolicy", statements=[ecs_exec_task_policy_statement])
+                
+        ecs_service.node.find_child('Service').add_property_override(
+            'EnableExecuteCommand', 'true'
+        )
+        
+        ecs_service.task_definition.task_role.attach_inline_policy(
+            policy=ecs_exec_task_policy
+        )
+        
+        log_group.grant_write(ecs_service.task_definition.task_role)
+        kms_key.grant_decrypt(ecs_service.task_definition.task_role)
+        exec_bucket.grant_put(ecs_service.task_definition.task_role)
+        
+        cdk.CfnOutput(
+            self,"ExecCommand",
+            value=f"""aws ecs execute-command --region {cdk.Stack.of(self).region} --cluster {cluster.cluster_name} --task <TASKID> --container web --command "/bin/bash" --interactive"""
+        )
+        ### END ECS EXEC ###
+        
