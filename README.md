@@ -1,58 +1,31 @@
+# Managing Autoscaling Group updates with Amazon ECS Capacity Providers
 
-# Welcome to your CDK Python project!
+## Why
 
-This is a blank project for Python development with CDK.
+For those who need or decide to run their containers on self managed EC2 instead of AWS Fargate, they have to consider how to roll out updates to their AMI's.
+This process can be cumbersome and a bit of a headache to manage. 
+With Capacity Providers and cluster autoscaling, the headache can be lessened drastically.
+This walkthrough will showcase how one can seamlessly upgrade their autoscaling groups while maintaining availability and stability with their ECS services.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+## Pre-requisites
 
-This project is set up like a standard Python project.  The initialization
-process also creates a virtualenv within this project, stored under the `.venv`
-directory.  To create the virtualenv it assumes that there is a `python3`
-(or `python` for Windows) executable in your path with access to the `venv`
-package. If for any reason the automatic creation of the virtualenv fails,
-you can create the virtualenv manually.
+This demo will use the [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/cdk/) to build our environment as well as our ECS service.
 
-To manually create a virtualenv on MacOS and Linux:
+## Walkthrough
 
-```
-$ python3 -m venv .venv
-```
+1) Let's get a Python virtual environment setup and install all of the packages needed to get to deployin'!
 
-After the init process completes and the virtualenv is created, you can use the following
-step to activate your virtualenv.
-
-```
-$ source .venv/bin/activate
+```bash
+npm i -g aws-cdk
+virtualenv .env
+source .env/bin/activate
+pip3 install -r requirements.txt
 ```
 
-If you are a Windows platform, you would activate the virtualenv like this:
+2) In the code we are creating all of necessary resources to spin up our ECS cluster and service. 
+We are creating a single capacity provider and our service will use that as the strategy. So let's get our container deployed!
 
-```
-% .venv\Scripts\activate.bat
-```
-
-Once the virtualenv is activated, you can install the required dependencies.
-
-```
-$ pip install -r requirements.txt
+```bash
+cdk deploy --require-approval never
 ```
 
-At this point you can now synthesize the CloudFormation template for this code.
-
-```
-$ cdk synth
-```
-
-To add additional dependencies, for example other CDK libraries, just add
-them to your `setup.py` file and rerun the `pip install -r requirements.txt`
-command.
-
-## Useful commands
-
- * `cdk ls`          list all stacks in the app
- * `cdk synth`       emits the synthesized CloudFormation template
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk docs`        open CDK documentation
-
-Enjoy!

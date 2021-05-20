@@ -11,43 +11,59 @@ from aws_cdk import (
 )
 
 
-        
-
-
-
-
-
 class CPDemo(cdk.Stack):
 
     def __init__(self, scope: cdk.Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        # Creating a VPC and ECS Cluster
         vpc = ec2.Vpc(self, "VPC")
-
-        autoscaling_group = autoscaling.AutoScalingGroup(
-            self, "ASG",
-            vpc=vpc,
-            instance_type=ec2.InstanceType('t3.medium'),
-            machine_image=ecs.EcsOptimizedImage.amazon_linux2(
-                hardware_type=ecs.AmiHardwareType.STANDARD
-                #hardware_type=ecs.AmiHardwareType.ARM
-            ),
-            min_capacity=0,
-            max_capacity=100
-        )
-        
-        capacity_provider = ecs.AsgCapacityProvider(
-            self, "CapacityProvider",
-            auto_scaling_group=autoscaling_group,
-        )
 
         cluster = ecs.Cluster(
             self, "ECSCluster",
             vpc=vpc
         )
+
+        # Original ASG and Capacity Provider
+        autoscaling_group_old = autoscaling.AutoScalingGroup(
+            self, "ASGOld",
+            vpc=vpc,
+            instance_type=ec2.InstanceType('t3.medium'),
+            machine_image=ecs.EcsOptimizedImage.amazon_linux2(
+                hardware_type=ecs.AmiHardwareType.STANDARD
+            ),
+            min_capacity=0,
+            max_capacity=100
+        )
         
-        cluster.add_asg_capacity_provider(capacity_provider)
+        capacity_provider_old = ecs.AsgCapacityProvider(
+            self, "CapacityProviderOld",
+            auto_scaling_group=autoscaling_group_old,
+        )
         
+        cluster.add_asg_capacity_provider(capacity_provider_old)
+        
+        # Replacement ASG with new instance type. 
+        #autoscaling_group_new = autoscaling.AutoScalingGroup(
+        #    self, "ASGNew",
+        #    vpc=vpc,
+        #    instance_type=ec2.InstanceType('t3.medium'),
+        #    machine_image=ecs.EcsOptimizedImage.amazon_linux2(
+        #        hardware_type=ecs.AmiHardwareType.STANDARD
+        #        #hardware_type=ecs.AmiHardwareType.ARM
+        #    ),
+        #    min_capacity=0,
+        #    max_capacity=100
+        #)
+        #
+        #capacity_provider_new = ecs.AsgCapacityProvider(
+        #    self, "CapacityProviderNew",
+        #    auto_scaling_group=autoscaling_group_new,
+        #)
+
+        #cluster.add_asg_capacity_provider(capacity_provider_new)
+        
+        # Building out our ECS task definition and service
         task_definition = ecs.Ec2TaskDefinition(self, "TaskDefinition")
         
         task_definition.add_container(
@@ -63,9 +79,14 @@ class CPDemo(cdk.Stack):
             task_definition=task_definition,
             capacity_provider_strategies=[
                 ecs.CapacityProviderStrategy(
-                    capacity_provider=capacity_provider.capacity_provider_name,
-                    weight=1
-                )
+                    capacity_provider=capacity_provider_old.capacity_provider_name,
+                    weight=1,
+                    #base=0
+                ),
+                #ecs.CapacityProviderStrategy(
+                #    capacity_provider=capacity_provider_new.capacity_provider_name,
+                #    weight=1
+                #)
             ]
         )
         
