@@ -55,7 +55,7 @@ class CPDemo(cdk.Stack):
         #    min_capacity=0,
         #    max_capacity=100
         #)
-        #
+        
         #capacity_provider_new = ecs.AsgCapacityProvider(
         #    self, "CapacityProviderNew",
         #    auto_scaling_group=autoscaling_group_new,
@@ -77,17 +77,36 @@ class CPDemo(cdk.Stack):
             self, "DemoEC2Service",
             cluster=cluster,
             task_definition=task_definition,
+            desired_count=10,
             capacity_provider_strategies=[
-                ecs.CapacityProviderStrategy(
-                    capacity_provider=capacity_provider_old.capacity_provider_name,
-                    weight=1,
-                    #base=0
-                ),
+                #ecs.CapacityProviderStrategy(
+                #    capacity_provider=capacity_provider_old.capacity_provider_name,
+                #    weight=0,
+                #    base=0
+                #),
                 #ecs.CapacityProviderStrategy(
                 #    capacity_provider=capacity_provider_new.capacity_provider_name,
                 #    weight=1
                 #)
             ]
+        )
+        
+        cdk.CfnOutput(self, "ServiceName", 
+            value=ecs_service.service_name, 
+            description="Service name"
+        )
+        
+        cdk.CfnOutput(self, "ClusterName", 
+            value=cluster.cluster_name,
+            description="Cluster name"
+        )
+        
+        cdk.CfnOutput(self, "UpdateServiceCommand", 
+            value=f"""aws ecs update-service \
+--service {ecs_service.service_name} \
+--cluster {cluster.cluster_name} \
+--desired-count 0""",
+            description="Cluster name"
         )
         
         ### ECS EXEC ###
