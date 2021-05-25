@@ -1,11 +1,11 @@
-FROM python:3
-
-COPY ./python_app.py /app.py
+FROM python:3.8
 
 EXPOSE 5000
 
-RUN pip3 install flask
-
 WORKDIR /
 
-CMD ["flask", "run"]
+COPY ./python_app.py /app.py
+
+RUN pip3 install flask
+
+CMD ["flask", "run", "--host", "0.0.0.0"]

@@ -44,31 +44,31 @@ class CPDemo(cdk.Stack):
         cluster.add_asg_capacity_provider(capacity_provider_old)
         
         # Replacement ASG with new instance type. 
-        #autoscaling_group_new = autoscaling.AutoScalingGroup(
-        #    self, "ASGNew",
-        #    vpc=vpc,
-        #    instance_type=ec2.InstanceType('t3.medium'),
-        #    machine_image=ecs.EcsOptimizedImage.amazon_linux2(
-        #        hardware_type=ecs.AmiHardwareType.STANDARD
-        #        #hardware_type=ecs.AmiHardwareType.ARM
-        #    ),
-        #    min_capacity=0,
-        #    max_capacity=100
-        #)
+        autoscaling_group_new = autoscaling.AutoScalingGroup(
+            self, "ASGNew",
+            vpc=vpc,
+            instance_type=ec2.InstanceType('t4g.medium'),
+            machine_image=ecs.EcsOptimizedImage.amazon_linux2(
+                #hardware_type=ecs.AmiHardwareType.STANDARD
+                hardware_type=ecs.AmiHardwareType.ARM
+            ),
+            min_capacity=0,
+            max_capacity=100
+        )
         
-        #capacity_provider_new = ecs.AsgCapacityProvider(
-        #    self, "CapacityProviderNew",
-        #    auto_scaling_group=autoscaling_group_new,
-        #)
+        capacity_provider_new = ecs.AsgCapacityProvider(
+            self, "CapacityProviderNew",
+            auto_scaling_group=autoscaling_group_new,
+        )
 
-        #cluster.add_asg_capacity_provider(capacity_provider_new)
+        cluster.add_asg_capacity_provider(capacity_provider_new)
         
         # Building out our ECS task definition and service
         task_definition = ecs.Ec2TaskDefinition(self, "TaskDefinition")
         
         task_definition.add_container(
             "DemoApp",
-            image=ecs.ContainerImage.from_registry('amazon/amazon-ecs-sample'),
+            image=ecs.ContainerImage.from_registry('public.ecr.aws/f0j5z9b5/multi-arch-example:latest'),
             cpu=256,
             memory_limit_mib=512
         )
@@ -79,15 +79,15 @@ class CPDemo(cdk.Stack):
             task_definition=task_definition,
             desired_count=10,
             capacity_provider_strategies=[
-                #ecs.CapacityProviderStrategy(
-                #    capacity_provider=capacity_provider_old.capacity_provider_name,
-                #    weight=0,
-                #    base=0
-                #),
-                #ecs.CapacityProviderStrategy(
-                #    capacity_provider=capacity_provider_new.capacity_provider_name,
-                #    weight=1
-                #)
+                ecs.CapacityProviderStrategy(
+                    capacity_provider=capacity_provider_old.capacity_provider_name,
+                    weight=1,
+                    base=0
+                ),
+                ecs.CapacityProviderStrategy(
+                    capacity_provider=capacity_provider_new.capacity_provider_name,
+                    weight=1
+                )
             ]
         )
         
@@ -108,6 +108,31 @@ class CPDemo(cdk.Stack):
 --desired-count 0""",
             description="Cluster name"
         )
+        
+        cdk.CfnOutput(self, "OPSCaptureTasks", 
+            value=f"""tasks=$(aws ecs list-tasks \
+--service {ecs_service.service_name} \
+--cluster {cluster.cluster_name} \
+| jq -r .taskArns[])""",
+            description="Run this to capture all ecs tasks in the service"
+        )
+        
+        cdk.CfnOutput(self, "OPSExecFunction", 
+            value=f'''function ecsexec {{ \
+  aws ecs execute-command \
+  --region us-west-2 \
+  --cluster {cluster.cluster_name} \
+  --task $1 \
+  --command /bin/sh \
+  --interactive \
+  --command "curl localhost:5000"; }}''',
+            description="Run this to curl against the running task to get architecture"
+        )       
+        
+        cdk.CfnOutput(self, "OPSArchDiscoveryLoop", 
+            value="for t in $tasks;do ecsexec $t|grep OS; done",
+            description="Check Arch for each container"
+        )       
         
         ### ECS EXEC ###
         # Cluster level pre-requisites for logging and auditing
