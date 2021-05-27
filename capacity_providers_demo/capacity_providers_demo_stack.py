@@ -49,7 +49,6 @@ class CPDemo(cdk.Stack):
             vpc=vpc,
             instance_type=ec2.InstanceType('t4g.medium'),
             machine_image=ecs.EcsOptimizedImage.amazon_linux2(
-                #hardware_type=ecs.AmiHardwareType.STANDARD
                 hardware_type=ecs.AmiHardwareType.ARM
             ),
             min_capacity=0,
@@ -68,7 +67,7 @@ class CPDemo(cdk.Stack):
         
         task_definition.add_container(
             "DemoApp",
-            image=ecs.ContainerImage.from_registry('public.ecr.aws/f0j5z9b5/multi-arch-example:latest'),
+            image=ecs.ContainerImage.from_registry('public.ecr.aws/f0j5z9b5/osarch'),
             cpu=256,
             memory_limit_mib=512
         )
@@ -79,11 +78,11 @@ class CPDemo(cdk.Stack):
             task_definition=task_definition,
             desired_count=10,
             capacity_provider_strategies=[
-                ecs.CapacityProviderStrategy(
-                    capacity_provider=capacity_provider_old.capacity_provider_name,
-                    weight=1,
-                    base=0
-                ),
+                #ecs.CapacityProviderStrategy(
+                #    capacity_provider=capacity_provider_old.capacity_provider_name,
+                #    weight=0,
+                #    base=5
+                #),
                 ecs.CapacityProviderStrategy(
                     capacity_provider=capacity_provider_new.capacity_provider_name,
                     weight=1
@@ -141,6 +140,7 @@ class CPDemo(cdk.Stack):
         exec_bucket = s3.Bucket(
             self, "ExecS3Bucket", 
             removal_policy=cdk.RemovalPolicy.DESTROY, 
+            auto_delete_objects=True
         )
         
         log_group = logs.LogGroup(self, "ExecLogGroup")

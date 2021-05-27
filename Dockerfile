@@ -6,6 +6,6 @@ WORKDIR /
 
 COPY ./python_app.py /app.py
 
-RUN pip3 install flask
+RUN pip install flask
 
 CMD ["flask", "run", "--host", "0.0.0.0"]
