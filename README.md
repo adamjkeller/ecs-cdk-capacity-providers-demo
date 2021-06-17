@@ -13,19 +13,5 @@ This demo will use the [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/
 
 ## Walkthrough
 
-1) Let's get a Python virtual environment setup and install all of the packages needed to get to deployin'!
-
-```bash
-npm i -g aws-cdk
-virtualenv .env
-source .env/bin/activate
-pip3 install -r requirements.txt
-```
-
-2) In the code we are creating all of necessary resources to spin up our ECS cluster and service. 
-We are creating a single capacity provider and our service will use that as the strategy. So let's get our container deployed!
-
-```bash
-cdk deploy --require-approval never
-```
+To walk through this repo, check out this (post)[https://aws.amazon.com/blogs/containers/rolling-ec2-ami-updates-with-capacity-providers-in-amazon-ecs/] on the AWS containers blog.
 
