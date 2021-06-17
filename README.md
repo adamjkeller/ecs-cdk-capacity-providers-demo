@@ -13,5 +13,5 @@ This demo will use the [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/
 
 ## Walkthrough
 
-To walk through this repo, check out this (post)[https://aws.amazon.com/blogs/containers/rolling-ec2-ami-updates-with-capacity-providers-in-amazon-ecs/] on the AWS containers blog.
+To walk through this repo, check out this [post](https://aws.amazon.com/blogs/containers/rolling-ec2-ami-updates-with-capacity-providers-in-amazon-ecs/) on the AWS containers blog.
 
